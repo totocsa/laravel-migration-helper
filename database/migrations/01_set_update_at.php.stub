@@ -10,22 +10,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("CREATE OR REPLACE FUNCTION public.set_updated_at()"
-            . " RETURNS trigger"
-            . " LANGUAGE 'plpgsql'"
-            . " COST 100"
-            . " VOLATILE NOT LEAKPROOF"
-            . " AS \$BODY$\n"
-            . "BEGIN\n"
-            . "  IF NEW.updated_at IS NULL THEN\n"
-            . "    NEW.updated_at = CURRENT_TIMESTAMP;\n"
-            . "  END IF;\n"
-            . "\n"
-            . "  RETURN NEW;\n"
-            . "END;\n"
-            . "\$BODY$;");
+        $driver = DB::getDriverName();
 
-        DB::statement("ALTER FUNCTION public.set_updated_at() OWNER TO zem;");
+        if ($driver === 'pgsql') {
+            DB::statement("CREATE OR REPLACE FUNCTION public.set_updated_at()"
+                . " RETURNS trigger"
+                . " LANGUAGE 'plpgsql'"
+                . " COST 100"
+                . " VOLATILE NOT LEAKPROOF"
+                . " AS \$BODY$\n"
+                . "BEGIN\n"
+                . "  IF NEW.updated_at IS NULL THEN\n"
+                . "    NEW.updated_at = CURRENT_TIMESTAMP;\n"
+                . "  END IF;\n"
+                . "\n"
+                . "  RETURN NEW;\n"
+                . "END;\n"
+                . "\$BODY$;");
+
+            DB::statement("ALTER FUNCTION public.set_updated_at() OWNER TO zem;");
+        }
     }
 
     /**
