@@ -10,7 +10,7 @@ class MigrationHelper
     {
         $driver = DB::getDriverName();
 
-        if ($driver = 'pgsql') {
+        if ($driver === 'pgsql') {
             DB::statement("ALTER TABLE $tableName ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
             DB::statement(
                 "CREATE OR REPLACE TRIGGER {$tableName}_set_update_at"
