@@ -11,13 +11,25 @@ class MigrationHelper
         $driver = DB::getDriverName();
 
         if ($driver === 'pgsql') {
-            DB::statement("ALTER TABLE $tableName ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
+            DB::statement("ALTER TABLE \"$tableName\" ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;");
+
             DB::statement(
-                "CREATE OR REPLACE TRIGGER {$tableName}_set_update_at"
+                "CREATE OR REPLACE TRIGGER \"{$tableName}_set_update_at\""
                     . " BEFORE UPDATE"
-                    . " ON public.{$tableName}"
+                    . " ON public.\"{$tableName}\""
                     . " FOR EACH ROW"
-                    . " EXECUTE FUNCTION public.set_updated_at()"
+                    . " EXECUTE FUNCTION public.set_updated_at();"
+            );
+        } elseif (in_array($driver, ['mysql', 'mariadb'])) {
+            DB::statement("ALTER TABLE `$tableName` CHANGE `created_at` `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP;");
+
+            DB::statement("DROP TRIGGER IF EXISTS `{$tableName}_set_updated_at`;");
+            DB::statement(
+                "CREATE TRIGGER `{$tableName}_set_updated_at` BEFORE UPDATE ON `{$tableName}` FOR EACH ROW BEGIN"
+                    . " IF NEW.`updated_at` IS NULL THEN"
+                    . "   SET NEW.`updated_at` = CURRENT_TIMESTAMP;"
+                    . " END IF;"
+                    . " END;"
             );
         }
     }
