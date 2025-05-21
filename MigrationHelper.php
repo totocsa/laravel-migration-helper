@@ -25,11 +25,11 @@ class MigrationHelper
 
             DB::statement("DROP TRIGGER IF EXISTS `{$tableName}_set_updated_at`;");
             DB::statement(
-                "CREATE TRIGGER `{$tableName}_set_updated_at` BEFORE UPDATE ON `{$tableName}` FOR EACH ROW BEGIN"
-                    . " IF NEW.`updated_at` IS NULL THEN"
-                    . "   SET NEW.`updated_at` = CURRENT_TIMESTAMP;"
-                    . " END IF;"
-                    . " END;"
+                "CREATE TRIGGER `{$tableName}_set_updated_at` BEFORE UPDATE ON `{$tableName}` FOR EACH ROW BEGIN\n"
+                    . "IF NEW.`updated_at` IS NULL THEN\n"
+                    . "  SET NEW.`updated_at` = CURRENT_TIMESTAMP;\n"
+                    . "END IF;\n"
+                    . "END\n"
             );
         }
     }
