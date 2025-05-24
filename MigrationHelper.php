@@ -3,27 +3,28 @@
 namespace Totocsa\MigrationHelper;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 
 class MigrationHelper
 {
-    public static function defaultCreatedUpdated(string $tableName)
+    public static function upDefaultCreatedUpdated(string $tableName)
     {
         $driver = DB::getDriverName();
 
         if ($driver === 'pgsql') {
-            DB::statement("ALTER TABLE \"$tableName\" ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;");
+            DB::statement("ALTER TABLE \"$tableName\" ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
 
             DB::statement(
                 "CREATE OR REPLACE TRIGGER \"{$tableName}_set_update_at\""
                     . " BEFORE UPDATE"
                     . " ON public.\"{$tableName}\""
                     . " FOR EACH ROW"
-                    . " EXECUTE FUNCTION public.set_updated_at();"
+                    . " EXECUTE FUNCTION public.set_updated_at()"
             );
         } elseif (in_array($driver, ['mysql', 'mariadb'])) {
             DB::statement("ALTER TABLE `$tableName` CHANGE `created_at` `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP;");
 
-            DB::statement("DROP TRIGGER IF EXISTS `{$tableName}_set_updated_at`;");
+            DB::statement("DROP TRIGGER IF EXISTS `{$tableName}_set_updated_at`");
             DB::statement(
                 "CREATE TRIGGER `{$tableName}_set_updated_at` BEFORE UPDATE ON `{$tableName}` FOR EACH ROW BEGIN\n"
                     . "IF NEW.`updated_at` IS NULL THEN\n"
@@ -32,6 +33,40 @@ class MigrationHelper
                     . "END\n"
             );
         }
+    }
+
+    public static function downDefaultCreatedUpdated(string $tableName)
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement("ALTER TABLE IF EXISTS \"$tableName\" ALTER COLUMN created_at DROP DEFAULT");
+            DB::statement("DROP TRIGGER IF EXISTS \"{$tableName}_set_updated_at\" ON \"$tableName\"");
+        } elseif (in_array($driver, ['mysql', 'mariadb'])) {
+            DB::statement("ALTER TABLE `$tableName` CHANGE `created_at` `created_at` TIMESTAMP NULL");
+            DB::statement("DROP TRIGGER IF EXISTS `{$tableName}_set_updated_at`");
+        }
+    }
+
+    public static function stubsToMigrations($groups, $path)
+    {
+        $global = $GLOBALS;
+        $isPublish = isset($global['argv']) && isset($global['argv'][0]) && $global['argv'][0] === 'artisan'
+            && isset($global['argv'][1]) && $global['argv'][1] === 'vendor:publish'
+            && isset($global['argv'][2]) && $global['argv'][2] === "--tag=$groups";
+
+        $files = File::files($path);
+        $sortedFiles = collect($files)->sortBy(fn($file) => $file->getFilename())->values();
+
+        $paths = [];
+        foreach ($sortedFiles as $v) {
+            $fileInfo = $v->getFileInfo();
+            $publishAs = self::publishAs($v, $isPublish, 2);
+
+            $paths[$fileInfo->getPathname()] = "$publishAs";
+        }
+
+        return $paths;
     }
 
     public static function publishedAs($fileinfo)
