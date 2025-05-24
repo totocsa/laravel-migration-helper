@@ -7,6 +7,28 @@ use Illuminate\Support\Facades\File;
 
 class MigrationHelper
 {
+    public static function upDefaultCreated(string $tableName)
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement("ALTER TABLE \"$tableName\" ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
+        } elseif (in_array($driver, ['mysql', 'mariadb'])) {
+            DB::statement("ALTER TABLE `$tableName` CHANGE `created_at` `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP;");
+        }
+    }
+
+    public static function downDefaultCreated(string $tableName)
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            DB::statement("ALTER TABLE IF EXISTS \"$tableName\" ALTER COLUMN created_at DROP DEFAULT");
+        } elseif (in_array($driver, ['mysql', 'mariadb'])) {
+            DB::statement("ALTER TABLE `$tableName` CHANGE `created_at` `created_at` TIMESTAMP NULL");
+        }
+    }
+
     public static function upDefaultCreatedUpdated(string $tableName)
     {
         $driver = DB::getDriverName();
